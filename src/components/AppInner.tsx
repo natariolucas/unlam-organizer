@@ -17,6 +17,9 @@ export function AppInner({ carrera }: AppInnerProps) {
   const [simMode, setSimMode] = useState(false);
   const [simOverrides, setSimOverrides] = useState<ProgresoPerfil>({});
   const [hideApproved, setHideApproved] = useState(false);
+  // Materias que se aprobaron mientras "ocultar aprobadas" ya estaba activo: se
+  // exceptúan del ocultamiento para que no desaparezcan de golpe apenas se marcan.
+  const [mantenerVisibles, setMantenerVisibles] = useState<Set<string>>(new Set());
 
   const { progreso, setEstado, updateGrades, removeMateria, importProgreso, setElectiva } = useProgreso(carrera.id);
 
@@ -37,6 +40,17 @@ export function AppInner({ carrera }: AppInnerProps) {
     () => new Set(carrera.tituloIntermedio?.materiaIds ?? []),
     [carrera.tituloIntermedio],
   );
+
+  // Ids a ocultar del Mapa/Tabla: aprobadas, salvo las recién aprobadas mientras el
+  // filtro ya estaba activo (esas se quedan a la vista hasta que se apague y prenda).
+  const hiddenIds = useMemo(() => {
+    if (!hideApproved) return new Set<string>();
+    const ids = new Set<string>();
+    for (const m of carrera.materias) {
+      if (estadosEfectivos[m.id] === 'aprobada' && !mantenerVisibles.has(m.id)) ids.add(m.id);
+    }
+    return ids;
+  }, [hideApproved, carrera.materias, estadosEfectivos, mantenerVisibles]);
 
   const selectedMateria = selectedId
     ? (carrera.materias.find(m => m.id === selectedId) ?? null)
@@ -78,6 +92,23 @@ export function AppInner({ carrera }: AppInnerProps) {
     mapaExportRef.current?.();
   }
 
+  function handleToggleHideApproved() {
+    setHideApproved(prev => {
+      if (!prev) setMantenerVisibles(new Set()); // arranca ocultando todo lo ya aprobado, sin excepciones
+      return !prev;
+    });
+  }
+
+  // displayId: la materia tal como se ve en el Mapa/Tabla (el cupo de electiva, si
+  // corresponde) — es la que se exceptúa del ocultamiento. targetId: donde vive de
+  // verdad el progreso (la electiva concreta elegida, si corresponde).
+  function handleSetEstado(displayId: string, targetId: string, estado: MateriaProgreso['estado']) {
+    setEstado(targetId, estado);
+    if (hideApproved && estado === 'aprobada') {
+      setMantenerVisibles(prev => (prev.has(displayId) ? prev : new Set(prev).add(displayId)));
+    }
+  }
+
   function handleToggleSim() {
     setSimMode(prev => {
       if (!prev) {
@@ -112,7 +143,7 @@ export function AppInner({ carrera }: AppInnerProps) {
         simMode={simMode}
         onToggleSim={handleToggleSim}
         hideApproved={hideApproved}
-        onToggleHideApproved={() => setHideApproved(v => !v)}
+        onToggleHideApproved={handleToggleHideApproved}
         onExport={handleExport}
         onImportProgreso={importProgreso}
       />
@@ -129,7 +160,7 @@ export function AppInner({ carrera }: AppInnerProps) {
               simMode={simMode}
               simOverrides={simOverrides}
               onSimClick={handleSimClick}
-              hideApproved={hideApproved}
+              hiddenIds={hiddenIds}
               exportRef={mapaExportRef}
               fileName={`correlativas-${carrera.id}.png`}
             />
@@ -140,12 +171,12 @@ export function AppInner({ carrera }: AppInnerProps) {
               estadosEfectivos={estadosEfectivos}
               milestoneIds={milestoneIds}
               onSelectMateria={setSelectedId}
-              onSetEstado={setEstado}
+              onSetEstado={(id, estado) => handleSetEstado(id, id, estado)}
               onRemoveMateria={removeMateria}
               onUpdateGrades={updateGrades}
               showCuatrimestre={!carrera.cuatrimestreEstimado}
               showAnio={!carrera.anioEstimado}
-              hideApproved={hideApproved}
+              hiddenIds={hiddenIds}
             />
           )}
         </div>
@@ -166,7 +197,7 @@ export function AppInner({ carrera }: AppInnerProps) {
               electivaId={electivaId}
               onSetElectiva={opcionId => setElectiva(selectedMateria.id, opcionId)}
               onClose={() => setSelectedId(null)}
-              onSetEstado={(estado: MateriaProgreso['estado']) => targetId && setEstado(targetId, estado)}
+              onSetEstado={(estado: MateriaProgreso['estado']) => targetId && handleSetEstado(selectedMateria.id, targetId, estado)}
               onRemove={() => { if (targetId) removeMateria(targetId); }}
               onUpdateGrades={updates => targetId && updateGrades(targetId, updates)}
             />

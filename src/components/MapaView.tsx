@@ -46,13 +46,14 @@ interface MapaViewProps {
   simMode: boolean;
   simOverrides: ProgresoPerfil;
   onSimClick: (id: string) => void;
-  hideApproved: boolean;
+  /** Ids que no se muestran en el mapa (materias aprobadas mientras "ocultar aprobadas" está activo). */
+  hiddenIds: Set<string>;
   fileName?: string;
   /** El botón "Exportar" del header dispara la exportación llamando a exportRef.current(). */
   exportRef?: RefObject<(() => void) | null>;
 }
 
-export function MapaView({ materias, progreso, estadosEfectivos, milestoneIds, onSelectMateria, simMode, simOverrides, onSimClick, hideApproved, fileName, exportRef }: MapaViewProps) {
+export function MapaView({ materias, progreso, estadosEfectivos, milestoneIds, onSelectMateria, simMode, simOverrides, onSimClick, hiddenIds, fileName, exportRef }: MapaViewProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
   const EC = getEstadoColors(theme);
@@ -60,8 +61,8 @@ export function MapaView({ materias, progreso, estadosEfectivos, milestoneIds, o
   const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
 
   const visibleMaterias = useMemo(
-    () => (hideApproved ? materias.filter(m => estadosEfectivos[m.id] !== 'aprobada') : materias),
-    [hideApproved, materias, estadosEfectivos],
+    () => (hiddenIds.size > 0 ? materias.filter(m => !hiddenIds.has(m.id)) : materias),
+    [hiddenIds, materias],
   );
 
   const { nodes: computed, edges: computedEdges } = useMemo(
