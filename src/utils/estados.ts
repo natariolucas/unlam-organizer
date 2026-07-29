@@ -2,15 +2,26 @@ import type { Theme } from '../context/ThemeContext';
 import type { EstadoMateria, Materia, MateriaProgreso, ProgresoPerfil } from '../types';
 
 // Un electiva_slot (Electiva I/II/III) no trackea su propio estado/notas: apunta a la
-// materia concreta (electiva_opcion) elegida, y ese progreso vive en el id de esa
-// materia. Si todavía no se eligió una a mano pero ya hay progreso cargado (p. ej. por
-// el importador de historia académica) para alguna de las opciones, se toma esa como
-// elegida automáticamente.
+// materia concreta (electiva_opcion) elegida a mano, y ese progreso vive en el id de esa
+// materia. No se auto-detecta por progreso existente: varios cupos comparten el mismo
+// pool de opciones, así que sin una elección explícita no hay forma de saber a cuál de
+// los cupos corresponde una opción ya aprobada.
+function resolveElegidaId(materia: Materia, progreso: ProgresoPerfil): string | undefined {
+  if (!materia.opciones) return undefined;
+  return progreso[materia.id]?.electivaId;
+}
+
 export function getProgresoEfectivo(materia: Materia, progreso: ProgresoPerfil): MateriaProgreso | undefined {
-  const p = progreso[materia.id];
-  if (!materia.opciones) return p;
-  const elegidaId = p?.electivaId ?? materia.opciones.find(id => progreso[id]);
+  if (!materia.opciones) return progreso[materia.id];
+  const elegidaId = resolveElegidaId(materia, progreso);
   return elegidaId ? progreso[elegidaId] : undefined;
+}
+
+/** Nombre a mostrar: el de la materia concreta elegida para el cupo, si ya se eligió una. */
+export function getNombreMostrado(materia: Materia, progreso: ProgresoPerfil, materias: Materia[]): string {
+  const elegidaId = resolveElegidaId(materia, progreso);
+  const elegida = elegidaId ? materias.find(m => m.id === elegidaId) : undefined;
+  return elegida?.nombre ?? materia.nombre;
 }
 
 export function getEstadoEfectivo(materia: Materia, progreso: ProgresoPerfil): EstadoMateria {

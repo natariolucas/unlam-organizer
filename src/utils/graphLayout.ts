@@ -1,7 +1,7 @@
 import { MarkerType, type Edge, type Node } from '@xyflow/react';
-import type { EstadoMateria, Materia, MateriaNodeData } from '../types';
+import type { EstadoMateria, Materia, MateriaNodeData, ProgresoPerfil } from '../types';
 import type { ColHeaderData } from '../components/ColumnHeaderNode';
-import { ESTADO_COLORS } from './estados';
+import { ESTADO_COLORS, getNombreMostrado } from './estados';
 
 export const NODE_W = 240;
 const NODE_H = 84;
@@ -15,6 +15,7 @@ export function buildGraph(
   materias: Materia[],
   estadosEfectivos: Record<string, EstadoMateria>,
   milestoneIds?: Set<string>,
+  progreso: ProgresoPerfil = {},
 ): { nodes: Node[]; edges: Edge[] } {
   const mainCols = new Map<number, Materia[]>();
   const transCols = new Map<number, Materia[]>();
@@ -85,7 +86,7 @@ export function buildGraph(
         position: pos.get(m.id) ?? { x: 0, y: 0 },
         data: {
           codigo: m.codigo,
-          nombre: m.nombre,
+          nombre: getNombreMostrado(m, progreso, materias),
           estado: estadosEfectivos[m.id] ?? 'bloqueada',
           tipo: m.tipo,
           tituloIntermedio: milestoneIds?.has(m.id) ?? false,

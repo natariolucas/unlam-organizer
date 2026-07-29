@@ -39,6 +39,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 interface MapaViewProps {
   materias: Materia[];
+  progreso: ProgresoPerfil;
   estadosEfectivos: Record<string, EstadoMateria>;
   milestoneIds?: Set<string>;
   onSelectMateria: (id: string | null) => void;
@@ -50,7 +51,7 @@ interface MapaViewProps {
   exportRef?: RefObject<(() => void) | null>;
 }
 
-export function MapaView({ materias, estadosEfectivos, milestoneIds, onSelectMateria, simMode, simOverrides, onSimClick, fileName, exportRef }: MapaViewProps) {
+export function MapaView({ materias, progreso, estadosEfectivos, milestoneIds, onSelectMateria, simMode, simOverrides, onSimClick, fileName, exportRef }: MapaViewProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
   const EC = getEstadoColors(theme);
@@ -58,8 +59,8 @@ export function MapaView({ materias, estadosEfectivos, milestoneIds, onSelectMat
   const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
 
   const { nodes: computed, edges: computedEdges } = useMemo(
-    () => buildGraph(materias, estadosEfectivos, milestoneIds),
-    [materias, estadosEfectivos, milestoneIds],
+    () => buildGraph(materias, estadosEfectivos, milestoneIds, progreso),
+    [materias, estadosEfectivos, milestoneIds, progreso],
   );
 
   // Bounds of the first two years (four columns), independent of estado (so it doesn't

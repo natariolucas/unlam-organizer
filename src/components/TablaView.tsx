@@ -1,7 +1,7 @@
 import { Fragment, useState, useCallback, type ChangeEvent } from 'react';
 import { Search, SlidersHorizontal, Award } from 'lucide-react';
 import type { EstadoMateria, Materia, MateriaProgreso, ProgresoPerfil } from '../types';
-import { getEstadoColors, getProgresoEfectivo } from '../utils/estados';
+import { getEstadoColors, getNombreMostrado, getProgresoEfectivo } from '../utils/estados';
 import { useTheme } from '../context/ThemeContext';
 
 interface TablaViewProps {
@@ -290,7 +290,7 @@ export function TablaView({
                     </tr>
                   )}
                   <MateriaRow
-                    materia={m}
+                    materia={{ ...m, nombre: getNombreMostrado(m, progreso, materias) }}
                     progreso={progreso[m.id]}
                     estado={estadosEfectivos[m.id] ?? 'bloqueada'}
                     onSetEstado={estado => onSetEstado(m.id, estado)}

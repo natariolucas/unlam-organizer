@@ -5,7 +5,7 @@ import { MapaView } from './MapaView';
 import { TablaView } from './TablaView';
 import { MateriaPanel } from './MateriaPanel';
 import { useProgreso } from '../hooks/useProgreso';
-import { getEstadoEfectivo } from '../utils/estados';
+import { getEstadoEfectivo, getNombreMostrado } from '../utils/estados';
 
 interface AppInnerProps {
   carrera: Carrera;
@@ -53,6 +53,11 @@ export function AppInner({ carrera }: AppInnerProps) {
   const opcionesElectiva = isElectivaSlot
     ? (selectedMateria?.opciones ?? []).map(id => carrera.materias.find(m => m.id === id)).filter((m): m is Materia => m !== undefined)
     : undefined;
+  // El panel y el nodo del mapa muestran el nombre de la materia concreta elegida (si
+  // ya se eligió una) en vez del nombre genérico del cupo.
+  const materiaPanel = selectedMateria
+    ? { ...selectedMateria, nombre: getNombreMostrado(selectedMateria, progreso, carrera.materias) }
+    : null;
 
   // El botón "Exportar" del header vive fuera del árbol de MapaView, así que se
   // comunica con él a través de este ref en vez de levantar el estado del grafo.
@@ -100,6 +105,7 @@ export function AppInner({ carrera }: AppInnerProps) {
           {view === 'mapa' ? (
             <MapaView
               materias={carrera.materias}
+              progreso={activeProgreso}
               estadosEfectivos={estadosEfectivos}
               milestoneIds={milestoneIds}
               onSelectMateria={setSelectedId}
@@ -130,7 +136,7 @@ export function AppInner({ carrera }: AppInnerProps) {
             <div className="panel-backdrop" onClick={() => setSelectedId(null)} />
             <MateriaPanel
               key={selectedMateria.id}
-              materia={selectedMateria}
+              materia={materiaPanel!}
               progreso={panelProgreso}
               estadoEfectivo={estadosEfectivos[selectedMateria.id] ?? 'bloqueada'}
               todasMaterias={carrera.materias}
