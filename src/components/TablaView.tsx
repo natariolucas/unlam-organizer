@@ -1,7 +1,7 @@
 import { Fragment, useState, useCallback, type ChangeEvent } from 'react';
 import { Search, SlidersHorizontal, Award } from 'lucide-react';
 import type { EstadoMateria, Materia, MateriaProgreso, ProgresoPerfil } from '../types';
-import { getEstadoColors } from '../utils/estados';
+import { getEstadoColors, getProgresoEfectivo } from '../utils/estados';
 import { useTheme } from '../context/ThemeContext';
 
 interface TablaViewProps {
@@ -60,7 +60,7 @@ function MateriaRow({ materia, progreso, estado, onSetEstado, onRemove, onUpdate
     });
   }
 
-  const hasGrades = progreso !== undefined;
+  const hasGrades = progreso?.estado !== undefined;
 
   function handleEstadoChange(e: ChangeEvent<HTMLSelectElement>) {
     const val = e.target.value;
@@ -85,17 +85,23 @@ function MateriaRow({ materia, progreso, estado, onSetEstado, onRemove, onUpdate
       <td className="td-center td-secondary" data-label="Hs">{materia.horasSemanales}</td>
       <td className="td-tipo td-secondary" data-label="Tipo">{TIPO_LABEL[materia.tipo] ?? materia.tipo}</td>
       <td className="td-estado" data-label="Estado">
-        <select
-          className="estado-select"
-          value={progreso?.estado ?? ''}
-          onChange={handleEstadoChange}
-          style={{ borderColor: c.border, color: c.text, background: c.bg }}
-        >
-          <option value="">{estado === 'bloqueada' ? 'Bloqueada' : 'Disponible'}</option>
-          <option value="cursando">Cursando</option>
-          <option value="regularizada">Regularizada</option>
-          <option value="aprobada">Aprobada</option>
-        </select>
+        {materia.tipo === 'electiva_slot' ? (
+          <button className="td-electiva-btn" onClick={onSelect} style={{ borderColor: c.border, color: c.text }}>
+            {progreso?.electivaId ? 'Ver electiva' : 'Elegir electiva'}
+          </button>
+        ) : (
+          <select
+            className="estado-select"
+            value={progreso?.estado ?? ''}
+            onChange={handleEstadoChange}
+            style={{ borderColor: c.border, color: c.text, background: c.bg }}
+          >
+            <option value="">{estado === 'bloqueada' ? 'Bloqueada' : 'Disponible'}</option>
+            <option value="cursando">Cursando</option>
+            <option value="regularizada">Regularizada</option>
+            <option value="aprobada">Aprobada</option>
+          </select>
+        )}
       </td>
       <td className="td-grade td-secondary" data-label="Parcial 1">
         {hasGrades ? (
@@ -189,7 +195,7 @@ export function TablaView({
   };
 
   const finalGrades = trackable
-    .map(m => progreso[m.id]?.notaFinal)
+    .map(m => getProgresoEfectivo(m, progreso)?.notaFinal)
     .filter((n): n is number => n !== null && n !== undefined);
   const promFinal = finalGrades.length > 0
     ? (finalGrades.reduce((a, b) => a + b, 0) / finalGrades.length)

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import type { Carrera, EstadoMateria, MateriaProgreso, ProgresoPerfil } from '../types';
+import type { Carrera, EstadoMateria, Materia, MateriaProgreso, ProgresoPerfil } from '../types';
 import { Header } from './Header';
 import { MapaView } from './MapaView';
 import { TablaView } from './TablaView';
@@ -17,7 +17,7 @@ export function AppInner({ carrera }: AppInnerProps) {
   const [simMode, setSimMode] = useState(false);
   const [simOverrides, setSimOverrides] = useState<ProgresoPerfil>({});
 
-  const { progreso, setEstado, updateGrades, removeMateria, importProgreso } = useProgreso(carrera.id);
+  const { progreso, setEstado, updateGrades, removeMateria, importProgreso, setElectiva } = useProgreso(carrera.id);
 
   const activeProgreso = useMemo<ProgresoPerfil>(
     () => (simMode ? { ...progreso, ...simOverrides } : progreso),
@@ -40,6 +40,19 @@ export function AppInner({ carrera }: AppInnerProps) {
   const selectedMateria = selectedId
     ? (carrera.materias.find(m => m.id === selectedId) ?? null)
     : null;
+
+  // Un electiva_slot (Electiva I/II/III) no trackea su propio estado/notas: apunta a
+  // la materia concreta (electiva_opcion) elegida, y el estado/notas reales viven en
+  // el progreso de esa materia. Ver setElectiva en useProgreso.
+  const isElectivaSlot = selectedMateria?.tipo === 'electiva_slot';
+  const electivaId = isElectivaSlot ? progreso[selectedMateria.id]?.electivaId : undefined;
+  const targetId = electivaId ?? selectedMateria?.id;
+  const panelProgreso = isElectivaSlot
+    ? (electivaId ? progreso[electivaId] : undefined)
+    : (selectedMateria ? progreso[selectedMateria.id] : undefined);
+  const opcionesElectiva = isElectivaSlot
+    ? (selectedMateria?.opciones ?? []).map(id => carrera.materias.find(m => m.id === id)).filter((m): m is Materia => m !== undefined)
+    : undefined;
 
   // El botón "Exportar" del header vive fuera del árbol de MapaView, así que se
   // comunica con él a través de este ref en vez de levantar el estado del grafo.
@@ -118,15 +131,18 @@ export function AppInner({ carrera }: AppInnerProps) {
             <MateriaPanel
               key={selectedMateria.id}
               materia={selectedMateria}
-              progreso={progreso[selectedMateria.id]}
+              progreso={panelProgreso}
               estadoEfectivo={estadosEfectivos[selectedMateria.id] ?? 'bloqueada'}
               todasMaterias={carrera.materias}
               estadosEfectivos={estadosEfectivos}
               tituloIntermedio={milestoneIds.has(selectedMateria.id) ? carrera.tituloIntermedio : undefined}
+              opcionesElectiva={opcionesElectiva}
+              electivaId={electivaId}
+              onSetElectiva={opcionId => setElectiva(selectedMateria.id, opcionId)}
               onClose={() => setSelectedId(null)}
-              onSetEstado={(estado: MateriaProgreso['estado']) => setEstado(selectedMateria.id, estado)}
-              onRemove={() => { removeMateria(selectedMateria.id); }}
-              onUpdateGrades={updates => updateGrades(selectedMateria.id, updates)}
+              onSetEstado={(estado: MateriaProgreso['estado']) => targetId && setEstado(targetId, estado)}
+              onRemove={() => { if (targetId) removeMateria(targetId); }}
+              onUpdateGrades={updates => targetId && updateGrades(targetId, updates)}
             />
           </>
         )}

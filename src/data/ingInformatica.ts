@@ -1,5 +1,9 @@
 import type { Carrera, Materia } from '../types';
 
+// Opciones entre las que se puede elegir para cubrir cualquiera de los 3 cupos de
+// electiva (Electiva I/II/III comparten el mismo pool de materias concretas).
+const ELECTIVAS_DISPONIBLES = ['3677', '3678', '3599', '3679', '3886'];
+
 const materias: Materia[] = [
     // ── 1° Año ─ 1° Cuatrimestre ──────────────────────────────────────────
     { id: '3621', codigo: '3621', nombre: 'Matemática Discreta',                      anio: 1, cuatrimestre: 1, horasSemanales: 4, correlativas: [],                                              tipo: 'obligatoria' },
@@ -71,17 +75,18 @@ const materias: Materia[] = [
     { id: '3669', codigo: '3669', nombre: 'Innovación y Emprendedorismo',             anio: 5, cuatrimestre: 1, horasSemanales: 4, correlativas: ['3661'],                                        tipo: 'obligatoria' },
     { id: '3670', codigo: '3670', nombre: 'Ciencia de Datos',                         anio: 5, cuatrimestre: 1, horasSemanales: 4, correlativas: ['3664', '3656'],                                tipo: 'obligatoria' },
     { id: '3671', codigo: '3671', nombre: 'Proyecto Final de Carrera',                anio: 5, cuatrimestre: 1, horasSemanales: 4, correlativas: ['3656', '3659', '3660', '3667'],               tipo: 'obligatoria', esAnual: true },
-    { id: '3672', codigo: '3672', nombre: 'Electiva I',                               anio: 5, cuatrimestre: 1, horasSemanales: 4, correlativas: ['3652', '3653', '3661'],                        tipo: 'electiva_slot' },
+    { id: '3672', codigo: '3672', nombre: 'Electiva I',                               anio: 5, cuatrimestre: 1, horasSemanales: 4, correlativas: ['3652', '3653', '3661'],                        tipo: 'electiva_slot', opciones: ELECTIVAS_DISPONIBLES },
 
     // ── 5° Año ─ 2° Cuatrimestre ──────────────────────────────────────────
-    { id: '3673', codigo: '3673', nombre: 'Electiva II',                              anio: 5, cuatrimestre: 2, horasSemanales: 4, correlativas: ['3652', '3653', '3661'],                        tipo: 'electiva_slot' },
-    { id: '3674', codigo: '3674', nombre: 'Electiva III',                             anio: 5, cuatrimestre: 2, horasSemanales: 4, correlativas: ['3652', '3653', '3661'],                        tipo: 'electiva_slot' },
+    { id: '3673', codigo: '3673', nombre: 'Electiva II',                              anio: 5, cuatrimestre: 2, horasSemanales: 4, correlativas: ['3652', '3653', '3661'],                        tipo: 'electiva_slot', opciones: ELECTIVAS_DISPONIBLES },
+    { id: '3674', codigo: '3674', nombre: 'Electiva III',                             anio: 5, cuatrimestre: 2, horasSemanales: 4, correlativas: ['3652', '3653', '3661'],                        tipo: 'electiva_slot', opciones: ELECTIVAS_DISPONIBLES },
 
     // ── Cursos Electivos Disponibles ───────────────────────────────────────
     { id: '3677', codigo: '3677', nombre: 'Lenguaje Orientado a Negocios',            anio: 5, cuatrimestre: 1, horasSemanales: 4, correlativas: ['3652', '3653', '3661'],                        tipo: 'electiva_opcion' },
     { id: '3678', codigo: '3678', nombre: 'Tecnologías en Seguridad',                 anio: 5, cuatrimestre: 2, horasSemanales: 4, correlativas: ['3652', '3653', '3661'],                        tipo: 'electiva_opcion' },
     { id: '3599', codigo: '3599', nombre: 'Redes Móviles e IoT',                      anio: 5, cuatrimestre: 2, horasSemanales: 4, correlativas: ['3652', '3653', '3661'],                        tipo: 'electiva_opcion' },
     { id: '3679', codigo: '3679', nombre: 'Visión Artificial',                        anio: 5, cuatrimestre: 2, horasSemanales: 4, correlativas: ['3652', '3653', '3661'],                        tipo: 'electiva_opcion' },
+    { id: '3886', codigo: '3886', nombre: 'Informática Biomédica y Tecnologías de la Salud', anio: 5, cuatrimestre: 1, horasSemanales: 4, correlativas: ['3652', '3653', '3661'],                 tipo: 'electiva_opcion' },
 
     // ── Conocimientos Transversales ────────────────────────────────────────
     { id: '901',  codigo: '901',  nombre: 'Inglés Transversal Nivel I',               anio: 1, cuatrimestre: 1, horasSemanales: 4, correlativas: [],                                              tipo: 'transversal' },

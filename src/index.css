@@ -704,6 +704,19 @@ input  { font-family: inherit; }
 .panel-action-remove     { color: #ef4444 !important; border-color: #ef4444 !important; }
 .panel-action-remove:hover { background: rgba(239,68,68,0.1) !important; }
 
+.panel-electiva-select {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--brd);
+  border-radius: 6px;
+  color: var(--txt);
+  font-size: 13px;
+  outline: none;
+}
+.panel-electiva-select:focus { border-color: var(--accent); }
+.panel-electiva-hint { font-size: 11px; color: var(--txt-3); margin: 8px 0 0; line-height: 1.4; }
+
 .panel-grades { display: flex; gap: 8px; }
 .panel-grade-field {
   display: flex;
@@ -915,6 +928,19 @@ input  { font-family: inherit; }
   background: var(--bg-1);
   color: var(--txt);
 }
+
+.td-electiva-btn {
+  width: 100%;
+  padding: 4px 6px;
+  background: var(--bg);
+  border: 1px solid;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.td-electiva-btn:hover { background: var(--bg-1); }
 
 .grade-input {
   width: 70px;

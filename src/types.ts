@@ -22,13 +22,18 @@ export interface Materia {
   correlativas: string[];
   tipo: TipoMateria;
   esAnual?: boolean;
+  /** Solo en electiva_slot: ids de las materias (electiva_opcion) entre las que se puede elegir para este cupo. */
+  opciones?: string[];
 }
 
 export interface MateriaProgreso {
-  estado: 'cursando' | 'regularizada' | 'aprobada';
+  /** Ausente cuando la materia todavía no se trackeó (p. ej. un electiva_slot que solo tiene `electivaId` elegido). */
+  estado?: 'cursando' | 'regularizada' | 'aprobada';
   notaParcial1: number | null;
   notaParcial2: number | null;
   notaFinal: number | null;
+  /** Solo en electiva_slot: id de la materia concreta (electiva_opcion) elegida para este cupo. El estado/notas reales se guardan en el progreso de esa materia, no acá. */
+  electivaId?: string;
 }
 
 /** Hito de título intermedio que se obtiene aprobando un subconjunto de materias. */

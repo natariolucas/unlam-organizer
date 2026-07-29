@@ -12,6 +12,11 @@ interface MateriaPanelProps {
   estadosEfectivos: Record<string, EstadoMateria>;
   /** Definido si esta materia cuenta para el título intermedio de la carrera */
   tituloIntermedio?: TituloIntermedio;
+  /** Solo si materia.tipo === 'electiva_slot': materias entre las que se puede elegir para este cupo. */
+  opcionesElectiva?: Materia[];
+  /** Solo si materia.tipo === 'electiva_slot': id de la opción elegida, si ya se eligió una. */
+  electivaId?: string;
+  onSetElectiva?: (opcionId: string | null) => void;
   onClose: () => void;
   onSetEstado: (estado: MateriaProgreso['estado']) => void;
   onRemove: () => void;
@@ -40,6 +45,9 @@ export function MateriaPanel({
   todasMaterias,
   estadosEfectivos,
   tituloIntermedio,
+  opcionesElectiva,
+  electivaId,
+  onSetElectiva,
   onClose,
   onSetEstado,
   onRemove,
@@ -49,6 +57,7 @@ export function MateriaPanel({
   const EC = getEstadoColors(theme);
   const c = EC[estadoEfectivo];
   const editable = progreso !== undefined;
+  const isSlot = materia.tipo === 'electiva_slot';
 
   const [p1, setP1] = useState<string>(progreso?.notaParcial1?.toString() ?? '');
   const [p2, setP2] = useState<string>(progreso?.notaParcial2?.toString() ?? '');
@@ -70,7 +79,7 @@ export function MateriaPanel({
     m.correlativas.includes(materia.id) && m.tipo !== 'electiva_opcion',
   );
 
-  const acciones: { label: string; estado: MateriaProgreso['estado'] }[] = [
+  const acciones: { label: string; estado: NonNullable<MateriaProgreso['estado']> }[] = [
     { label: 'Cursando',     estado: 'cursando'     },
     { label: 'Regularizada', estado: 'regularizada' },
     { label: 'Aprobada',     estado: 'aprobada'     },
@@ -112,29 +121,51 @@ export function MateriaPanel({
         {c.label}
       </div>
 
-      {/* Acciones de estado */}
-      <div className="panel-section">
-        <div className="panel-section-title">Cambiar estado</div>
-        <div className="panel-actions">
-          {acciones.map(a => (
-            <button
-              key={a.estado}
-              className={`panel-action-btn${progreso?.estado === a.estado ? ' active' : ''}`}
-              style={progreso?.estado === a.estado
-                ? { background: EC[a.estado].bg, borderColor: EC[a.estado].border, color: EC[a.estado].text }
-                : undefined}
-              onClick={() => onSetEstado(a.estado)}
-            >
-              {a.label}
-            </button>
-          ))}
-          {progreso && (
-            <button className="panel-action-btn panel-action-remove" onClick={onRemove}>
-              Quitar
-            </button>
+      {/* Elegir electiva concreta */}
+      {isSlot && (
+        <div className="panel-section">
+          <div className="panel-section-title">Electiva elegida</div>
+          <select
+            className="panel-electiva-select"
+            value={electivaId ?? ''}
+            onChange={e => onSetElectiva?.(e.target.value === '' ? null : e.target.value)}
+          >
+            <option value="">— Elegí una materia —</option>
+            {opcionesElectiva?.map(o => (
+              <option key={o.id} value={o.id}>{o.nombre}</option>
+            ))}
+          </select>
+          {!electivaId && (
+            <p className="panel-electiva-hint">Elegí qué materia vas a hacer (o hiciste) para poder registrar su estado y notas.</p>
           )}
         </div>
-      </div>
+      )}
+
+      {/* Acciones de estado */}
+      {(!isSlot || electivaId) && (
+        <div className="panel-section">
+          <div className="panel-section-title">Cambiar estado</div>
+          <div className="panel-actions">
+            {acciones.map(a => (
+              <button
+                key={a.estado}
+                className={`panel-action-btn${progreso?.estado === a.estado ? ' active' : ''}`}
+                style={progreso?.estado === a.estado
+                  ? { background: EC[a.estado].bg, borderColor: EC[a.estado].border, color: EC[a.estado].text }
+                  : undefined}
+                onClick={() => onSetEstado(a.estado)}
+              >
+                {a.label}
+              </button>
+            ))}
+            {progreso && (
+              <button className="panel-action-btn panel-action-remove" onClick={onRemove}>
+                Quitar
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Notas */}
       {editable && (

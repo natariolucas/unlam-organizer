@@ -1,9 +1,21 @@
 import type { Theme } from '../context/ThemeContext';
-import type { EstadoMateria, Materia, ProgresoPerfil } from '../types';
+import type { EstadoMateria, Materia, MateriaProgreso, ProgresoPerfil } from '../types';
+
+// Un electiva_slot (Electiva I/II/III) no trackea su propio estado/notas: apunta a la
+// materia concreta (electiva_opcion) elegida, y ese progreso vive en el id de esa
+// materia. Si todavía no se eligió una a mano pero ya hay progreso cargado (p. ej. por
+// el importador de historia académica) para alguna de las opciones, se toma esa como
+// elegida automáticamente.
+export function getProgresoEfectivo(materia: Materia, progreso: ProgresoPerfil): MateriaProgreso | undefined {
+  const p = progreso[materia.id];
+  if (!materia.opciones) return p;
+  const elegidaId = p?.electivaId ?? materia.opciones.find(id => progreso[id]);
+  return elegidaId ? progreso[elegidaId] : undefined;
+}
 
 export function getEstadoEfectivo(materia: Materia, progreso: ProgresoPerfil): EstadoMateria {
-  const p = progreso[materia.id];
-  if (p) return p.estado;
+  const resuelto = getProgresoEfectivo(materia, progreso);
+  if (resuelto?.estado) return resuelto.estado;
   if (materia.correlativas.length === 0) return 'disponible';
   const cumplidas = materia.correlativas.every(id => {
     const cp = progreso[id];

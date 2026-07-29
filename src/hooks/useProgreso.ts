@@ -78,5 +78,30 @@ export function useProgreso(carreraId: string) {
     setProgreso(data);
   }, []);
 
-  return { progreso, setEstado, updateGrades, removeMateria, importProgreso };
+  // Solo para electiva_slot: guarda o cambia qué materia concreta (electiva_opcion)
+  // cubre este cupo. El estado/notas de esa materia se manejan aparte, con setEstado/
+  // updateGrades sobre su propio id.
+  const setElectiva = useCallback((slotId: string, opcionId: string | null) => {
+    setProgreso(prev => {
+      if (opcionId === null) {
+        if (!(slotId in prev)) return prev;
+        const next = { ...prev };
+        delete next[slotId];
+        return next;
+      }
+      const existing = prev[slotId];
+      return {
+        ...prev,
+        [slotId]: {
+          estado: existing?.estado,
+          notaParcial1: existing?.notaParcial1 ?? null,
+          notaParcial2: existing?.notaParcial2 ?? null,
+          notaFinal: existing?.notaFinal ?? null,
+          electivaId: opcionId,
+        },
+      };
+    });
+  }, []);
+
+  return { progreso, setEstado, updateGrades, removeMateria, importProgreso, setElectiva };
 }
