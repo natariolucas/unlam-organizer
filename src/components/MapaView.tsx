@@ -46,21 +46,27 @@ interface MapaViewProps {
   simMode: boolean;
   simOverrides: ProgresoPerfil;
   onSimClick: (id: string) => void;
+  hideApproved: boolean;
   fileName?: string;
   /** El botón "Exportar" del header dispara la exportación llamando a exportRef.current(). */
   exportRef?: RefObject<(() => void) | null>;
 }
 
-export function MapaView({ materias, progreso, estadosEfectivos, milestoneIds, onSelectMateria, simMode, simOverrides, onSimClick, fileName, exportRef }: MapaViewProps) {
+export function MapaView({ materias, progreso, estadosEfectivos, milestoneIds, onSelectMateria, simMode, simOverrides, onSimClick, hideApproved, fileName, exportRef }: MapaViewProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
   const EC = getEstadoColors(theme);
   const [legendOpen, setLegendOpen] = useState(false);
   const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
 
+  const visibleMaterias = useMemo(
+    () => (hideApproved ? materias.filter(m => estadosEfectivos[m.id] !== 'aprobada') : materias),
+    [hideApproved, materias, estadosEfectivos],
+  );
+
   const { nodes: computed, edges: computedEdges } = useMemo(
-    () => buildGraph(materias, estadosEfectivos, milestoneIds, progreso),
-    [materias, estadosEfectivos, milestoneIds, progreso],
+    () => buildGraph(visibleMaterias, estadosEfectivos, milestoneIds, progreso),
+    [visibleMaterias, estadosEfectivos, milestoneIds, progreso],
   );
 
   // Bounds of the first two years (four columns), independent of estado (so it doesn't

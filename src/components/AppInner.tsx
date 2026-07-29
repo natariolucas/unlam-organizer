@@ -16,6 +16,7 @@ export function AppInner({ carrera }: AppInnerProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [simMode, setSimMode] = useState(false);
   const [simOverrides, setSimOverrides] = useState<ProgresoPerfil>({});
+  const [hideApproved, setHideApproved] = useState(false);
 
   const { progreso, setEstado, updateGrades, removeMateria, importProgreso, setElectiva } = useProgreso(carrera.id);
 
@@ -79,8 +80,12 @@ export function AppInner({ carrera }: AppInnerProps) {
 
   function handleToggleSim() {
     setSimMode(prev => {
-      if (!prev) setSelectedId(null);
-      else setSimOverrides({});
+      if (!prev) {
+        setSelectedId(null);
+        setHideApproved(false); // el modo simulación arranca mostrando todo
+      } else {
+        setSimOverrides({});
+      }
       return !prev;
     });
   }
@@ -106,6 +111,8 @@ export function AppInner({ carrera }: AppInnerProps) {
         onViewChange={setView}
         simMode={simMode}
         onToggleSim={handleToggleSim}
+        hideApproved={hideApproved}
+        onToggleHideApproved={() => setHideApproved(v => !v)}
         onExport={handleExport}
         onImportProgreso={importProgreso}
       />
@@ -122,6 +129,7 @@ export function AppInner({ carrera }: AppInnerProps) {
               simMode={simMode}
               simOverrides={simOverrides}
               onSimClick={handleSimClick}
+              hideApproved={hideApproved}
               exportRef={mapaExportRef}
               fileName={`correlativas-${carrera.id}.png`}
             />
@@ -137,6 +145,7 @@ export function AppInner({ carrera }: AppInnerProps) {
               onUpdateGrades={updateGrades}
               showCuatrimestre={!carrera.cuatrimestreEstimado}
               showAnio={!carrera.anioEstimado}
+              hideApproved={hideApproved}
             />
           )}
         </div>
