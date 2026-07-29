@@ -14,6 +14,8 @@ interface MateriaPanelProps {
   tituloIntermedio?: TituloIntermedio;
   /** Solo si materia.tipo === 'electiva_slot': materias entre las que se puede elegir para este cupo. */
   opcionesElectiva?: Materia[];
+  /** Solo si materia.tipo === 'electiva_slot': ids ya elegidos en otros cupos de electiva (no seleccionables acá). */
+  opcionesTomadas?: Set<string>;
   /** Solo si materia.tipo === 'electiva_slot': id de la opción elegida, si ya se eligió una. */
   electivaId?: string;
   onSetElectiva?: (opcionId: string | null) => void;
@@ -46,6 +48,7 @@ export function MateriaPanel({
   estadosEfectivos,
   tituloIntermedio,
   opcionesElectiva,
+  opcionesTomadas,
   electivaId,
   onSetElectiva,
   onClose,
@@ -132,7 +135,9 @@ export function MateriaPanel({
           >
             <option value="">— Elegí una materia —</option>
             {opcionesElectiva?.map(o => (
-              <option key={o.id} value={o.id}>{o.nombre}</option>
+              <option key={o.id} value={o.id} disabled={opcionesTomadas?.has(o.id)}>
+                {o.nombre}{opcionesTomadas?.has(o.id) ? ' (ya elegida en otro cupo)' : ''}
+              </option>
             ))}
           </select>
           {!electivaId && (

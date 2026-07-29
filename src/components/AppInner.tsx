@@ -53,6 +53,16 @@ export function AppInner({ carrera }: AppInnerProps) {
   const opcionesElectiva = isElectivaSlot
     ? (selectedMateria?.opciones ?? []).map(id => carrera.materias.find(m => m.id === id)).filter((m): m is Materia => m !== undefined)
     : undefined;
+  // Una misma materia concreta no puede cubrir dos cupos a la vez: se bloquea en el
+  // selector si ya está elegida en otro cupo de electiva.
+  const opcionesTomadas = isElectivaSlot
+    ? new Set(
+        carrera.materias
+          .filter(m => m.tipo === 'electiva_slot' && m.id !== selectedMateria?.id)
+          .map(m => progreso[m.id]?.electivaId)
+          .filter((id): id is string => id !== undefined),
+      )
+    : undefined;
   // El panel y el nodo del mapa muestran el nombre de la materia concreta elegida (si
   // ya se eligió una) en vez del nombre genérico del cupo.
   const materiaPanel = selectedMateria
@@ -143,6 +153,7 @@ export function AppInner({ carrera }: AppInnerProps) {
               estadosEfectivos={estadosEfectivos}
               tituloIntermedio={milestoneIds.has(selectedMateria.id) ? carrera.tituloIntermedio : undefined}
               opcionesElectiva={opcionesElectiva}
+              opcionesTomadas={opcionesTomadas}
               electivaId={electivaId}
               onSetElectiva={opcionId => setElectiva(selectedMateria.id, opcionId)}
               onClose={() => setSelectedId(null)}
