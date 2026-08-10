@@ -47,20 +47,21 @@ interface ConnToast {
  * reporta con eventos fuera de orden o falsos positivos (por ejemplo si el SO ve por
  * un instante otra interfaz, una VPN, etc). Antes de anunciar "conexión restablecida"
  * hacemos un pedido real y liviano; si no llega, el 'online' era falso y lo ignoramos.
+ *
+ * `signal` lo controla quien llama: así, si llega un evento más nuevo (togglear
+ * wifi rápido dispara varios 'online'/'offline' seguidos) se puede abortar este
+ * chequeo en vez de dejarlo resolver tarde y pisar un estado más reciente.
  */
-async function hasRealConnectivity(): Promise<boolean> {
+async function hasRealConnectivity(signal: AbortSignal): Promise<boolean> {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
     // 'no-cors' + generate_204: el mismo endpoint que usa Chrome/Android para sus
     // propios chequeos de conectividad. No importa leer la respuesta (es opaca), solo
     // que el pedido llegue y vuelva sin tirar error de red.
     await fetch('https://www.gstatic.com/generate_204', {
       mode: 'no-cors',
       cache: 'no-store',
-      signal: controller.signal,
+      signal,
     });
-    clearTimeout(timeout);
     return true;
   } catch {
     return false;
@@ -159,6 +160,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     saveTimer.current = setTimeout(pushToDrive, 1500);
   }, [pushToDrive]);
 
+  // Chequeo de conectividad en curso (si lo hay): togglear wifi rápido dispara varios
+  // eventos 'online'/'offline' seguidos, y sin esto cada uno lanzaba su propio fetch de
+  // hasta 3s sin cancelar el anterior — el que terminaba último pisaba el toast con un
+  // estado viejo. Cada evento nuevo aborta el chequeo pendiente antes de seguir.
+  const connCheck = useRef<{ controller: AbortController; timeout: ReturnType<typeof setTimeout> } | null>(null);
+  const cancelPendingConnCheck = useCallback(() => {
+    if (!connCheck.current) return;
+    clearTimeout(connCheck.current.timeout);
+    connCheck.current.controller.abort();
+    connCheck.current = null;
+  }, []);
+
   // Si el navegador pierde/recupera conexión, avisamos con un toast (como YouTube). Al
   // reconectar, si había sesión de Google activa, además disparamos un guardado: los
   // cambios hechos offline ya quedaron en `cloudProgreso` en memoria (ver
@@ -166,11 +179,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // silencio y no se reintenta solo — hay que volver a intentarlo acá.
   useEffect(() => {
     const handleOffline = () => {
+      cancelPendingConnCheck();
       setToast({ kind: 'offline', message: 'Sin conexión — los cambios se siguen guardando en este dispositivo.' });
     };
     const handleOnline = () => {
+      cancelPendingConnCheck();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      connCheck.current = { controller, timeout };
       void (async () => {
-        if (!(await hasRealConnectivity())) return; // 'online' falso positivo, se ignora
+        const ok = await hasRealConnectivity(controller.signal);
+        if (connCheck.current?.controller !== controller) return; // superado por un evento más nuevo
+        clearTimeout(timeout);
+        connCheck.current = null;
+        if (!ok) return; // 'online' falso positivo, se ignora
         setToast({ kind: 'online', message: 'Conexión restablecida' });
         if (statusRef.current === 'logged-in') pushToDrive();
       })();
@@ -178,10 +200,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
     return () => {
+      cancelPendingConnCheck();
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
     };
-  }, [pushToDrive]);
+  }, [pushToDrive, cancelPendingConnCheck]);
 
   useEffect(() => {
     if (!toast) return;
