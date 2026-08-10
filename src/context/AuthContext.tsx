@@ -41,6 +41,32 @@ interface ConnToast {
   message: string;
 }
 
+/**
+ * El evento 'online' del navegador solo dice que el SO ve *alguna* interfaz de red
+ * activa, no que haya internet de verdad — al apagar el Wi-Fi, Chrome a veces lo
+ * reporta con eventos fuera de orden o falsos positivos (por ejemplo si el SO ve por
+ * un instante otra interfaz, una VPN, etc). Antes de anunciar "conexión restablecida"
+ * hacemos un pedido real y liviano; si no llega, el 'online' era falso y lo ignoramos.
+ */
+async function hasRealConnectivity(): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    // 'no-cors' + generate_204: el mismo endpoint que usa Chrome/Android para sus
+    // propios chequeos de conectividad. No importa leer la respuesta (es opaca), solo
+    // que el pedido llegue y vuelva sin tirar error de red.
+    await fetch('https://www.gstatic.com/generate_204', {
+      mode: 'no-cors',
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function readAllLocalProgreso(): CloudProgreso {
   const result: CloudProgreso = {};
   for (let i = 0; i < localStorage.length; i++) {
@@ -143,8 +169,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToast({ kind: 'offline', message: 'Sin conexión — los cambios se siguen guardando en este dispositivo.' });
     };
     const handleOnline = () => {
-      setToast({ kind: 'online', message: 'Conexión restablecida' });
-      if (statusRef.current === 'logged-in') pushToDrive();
+      void (async () => {
+        if (!(await hasRealConnectivity())) return; // 'online' falso positivo, se ignora
+        setToast({ kind: 'online', message: 'Conexión restablecida' });
+        if (statusRef.current === 'logged-in') pushToDrive();
+      })();
     };
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
