@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Wifi, WifiOff } from 'lucide-react';
 import type { ProgresoPerfil } from '../types';
 import {
   requestToken,
@@ -35,6 +36,11 @@ export function useAuth(): AuthCtx {
 
 const LOCAL_PROGRESO_PREFIX = 'unlam_progreso_v1_';
 
+interface ConnToast {
+  kind: 'offline' | 'online';
+  message: string;
+}
+
 function readAllLocalProgreso(): CloudProgreso {
   const result: CloudProgreso = {};
   for (let i = 0; i < localStorage.length; i++) {
@@ -55,8 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>('logged-out');
   const [user, setUser] = useState<GoogleUser | null>(null);
   const [cloudProgreso, setCloudProgreso] = useState<CloudProgreso | null>(null);
+  const [toast, setToast] = useState<ConnToast | null>(null);
   const tokenRef = useRef<string | null>(null);
+  const statusRef = useRef<Status>(status);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   const finishLogin = useCallback(async (token: string) => {
     tokenRef.current = token;
@@ -104,25 +116,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('logged-out');
   }, []);
 
+  /** Sube a Drive el `cloudProgreso` que haya en memoria en ese momento (todas las carreras). */
+  const pushToDrive = useCallback(() => {
+    const token = tokenRef.current;
+    if (!token) return;
+    setCloudProgreso(current => {
+      if (current) void driveSaveAll(token, current).catch(err => console.error('Error guardando en Drive:', err));
+      return current;
+    });
+  }, []);
+
   const updateCarreraProgreso = useCallback((carreraId: string, progreso: ProgresoPerfil) => {
     setCloudProgreso(prev => ({ ...(prev ?? {}), [carreraId]: progreso }));
 
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      const token = tokenRef.current;
-      if (!token) return;
-      setCloudProgreso(current => {
-        if (current) void driveSaveAll(token, current).catch(err => console.error('Error guardando en Drive:', err));
-        return current;
-      });
-    }, 1500);
-  }, []);
+    saveTimer.current = setTimeout(pushToDrive, 1500);
+  }, [pushToDrive]);
+
+  // Si el navegador pierde/recupera conexión, avisamos con un toast (como YouTube). Al
+  // reconectar, si había sesión de Google activa, además disparamos un guardado: los
+  // cambios hechos offline ya quedaron en `cloudProgreso` en memoria (ver
+  // updateCarreraProgreso), pero el PATCH a Drive mientras no había red falló en
+  // silencio y no se reintenta solo — hay que volver a intentarlo acá.
+  useEffect(() => {
+    const handleOffline = () => {
+      setToast({ kind: 'offline', message: 'Sin conexión — los cambios se siguen guardando en este dispositivo.' });
+    };
+    const handleOnline = () => {
+      setToast({ kind: 'online', message: 'Conexión restablecida' });
+      if (statusRef.current === 'logged-in') pushToDrive();
+    };
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [pushToDrive]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   return (
     <AuthContext.Provider
       value={{ status, user, syncConfigured: isGoogleSyncConfigured(), cloudProgreso, login, logout, updateCarreraProgreso }}
     >
       {children}
+      {toast && (
+        <div className={`conn-toast conn-toast--${toast.kind}`} role="status" aria-live="polite">
+          {toast.kind === 'offline' ? <WifiOff size={16} /> : <Wifi size={16} />}
+          <span>{toast.message}</span>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 }
